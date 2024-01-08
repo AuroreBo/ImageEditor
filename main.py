@@ -1,16 +1,32 @@
-# This is a sample Python script.
 
-# Press Maj+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+import requests
+import json
+from PIL import Image
+import numpy as np
+import urllib
 
 
-# Press the green button in the gutter to run the script.
+from matplotlib import pyplot as plt
+from matplotlib import image as mpimg
+
+# from PyQt5.QtWidgets import QApplication, QWidget
+
+def getCatImage():
+    rep = requests.get("https://api.thecatapi.com/v1/images/search")
+    return rep.content
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    #get image
+    catimage_dict = json.loads(getCatImage())
+    cat_url = catimage_dict[0]['url']
+
+    #display image
+    plt.title("Cat Image")
+    plt.xlabel("X pixels scaling")
+    plt.ylabel("Y pixels scaling")
+
+    np.array(Image.open(urllib.request.urlopen(cat_url)))
+    image = mpimg.imread(cat_url)
+    #plt.imshow(image)
+    #plt.show()
