@@ -18,44 +18,31 @@ from matplotlib import image as mpimg
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6 import uic
 
-from interface import Ui
-
-# __________________________________________________
-# UI class.
-# __________________________________________________
-class UI(QWidget):
-    def __init__(self):
-        super().__init__()
-
-        # loading the ui file with uic module
-        uic.loadUi("image_editor.ui", self)
+from interface import setupUI
 
 # __________________________________________________
 # Main.
 # __________________________________________________
 def main() -> None:
-    #
-    app = QApplication([])
-
-
-
-    window.show()
-    app.exec()
 
     # get url image
     cat_url = "https://cataas.com/cat"
 
-    # display image
-    plt.title("Cat Image")
-    plt.xlabel("X pixels scaling")
-    plt.ylabel("Y pixels scaling")
+    app = QApplication([])
 
+    app_name = "Image Editor"
+    window = setupUI(app_name,cat_url)
+
+    window.show()
+    app.exec()
+
+
+
+    # display image
     response = requests.get(cat_url)
     img = Image.open(BytesIO(response.content))
     img.show()
-    # image = mpimg.imread(img)
-    # plt.imshow(image)
-    # plt.show()
+
 
 if __name__ == "__main__":
     main()
