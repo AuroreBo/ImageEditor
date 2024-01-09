@@ -1,32 +1,61 @@
+# __________________________________________________
+# Librairies includes.
+# __________________________________________________
 
-import requests
-import json
+# _____ Utilities _____
 from PIL import Image
+from io import BytesIO
 import numpy as np
 import urllib
+import requests
+import json
 
-
+# _____ Image readers includes _____
 from matplotlib import pyplot as plt
 from matplotlib import image as mpimg
 
-# from PyQt5.QtWidgets import QApplication, QWidget
+# _____ UI includes _____
+from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6 import uic
 
-def getCatImage():
-    rep = requests.get("https://api.thecatapi.com/v1/images/search")
-    return rep.content
+from interface import Ui
 
-if __name__ == '__main__':
+# __________________________________________________
+# UI class.
+# __________________________________________________
+class UI(QWidget):
+    def __init__(self):
+        super().__init__()
 
-    #get image
-    catimage_dict = json.loads(getCatImage())
-    cat_url = catimage_dict[0]['url']
+        # loading the ui file with uic module
+        uic.loadUi("image_editor.ui", self)
 
-    #display image
+# __________________________________________________
+# Main.
+# __________________________________________________
+def main() -> None:
+    #
+    app = QApplication([])
+
+
+
+    window.show()
+    app.exec()
+
+    # get url image
+    cat_url = "https://cataas.com/cat"
+
+    # display image
     plt.title("Cat Image")
     plt.xlabel("X pixels scaling")
     plt.ylabel("Y pixels scaling")
 
-    np.array(Image.open(urllib.request.urlopen(cat_url)))
-    image = mpimg.imread(cat_url)
-    #plt.imshow(image)
-    #plt.show()
+    response = requests.get(cat_url)
+    img = Image.open(BytesIO(response.content))
+    img.show()
+    # image = mpimg.imread(img)
+    # plt.imshow(image)
+    # plt.show()
+
+if __name__ == "__main__":
+    main()
