@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QTabWidget
 from PyQt6.QtGui import QImage, QPixmap, QColor
 from PyQt6 import QtCore
 
@@ -9,61 +9,71 @@ from urllib.request import Request, urlopen
 import requests
 import json
 
-class CatImage(QWidget):
+class CatImage:
     """Cat Image"""
-    def __init__(self, name: str, parent: QWidget, pos: QtCore.QPoint) -> None:
+    def __init__(self, name: str, parent: QTabWidget, pos: QtCore.QPoint) -> None:
         # Init QWidget
         super().__init__()
 
-        self.setParent(parent)
-        self.move(pos)
+        self.ui = QWidget(parent)
+        self.ui.move(pos)
 
-        url = self.get_cat_url()
-        request_site = Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        data = urllib.request.urlopen(request_site).read()
+        img_data = self.get_cat_image_data()
 
-        # DISPLAY
-        self.pixmap = QPixmap()
-        self.pixmap.loadFromData(data)
-        self.pixmap2 = self.pixmap.scaledToHeight(350)
+        self.setup_ui(img_data)
 
-        self.label_img = QLabel(self)
-        self.label_img.setObjectName("cat_image")
-        self.label_img.setPixmap(self.pixmap2)
-        self.resize(self.pixmap2.width(), self.pixmap2.height())
+    def setup_ui(self, p_data_img):
+        self.ui.button = QPushButton(self.ui)
+        self.ui.button.setObjectName("button_generate")
+        self.ui.button.resize(80, 30)
+        self.ui.button.move(0, 0)
+        self.ui.button.setText("Generate")
+
+        pixmap = QPixmap()
+        pixmap.loadFromData(p_data_img)
+        self.ui.pixmap2 = pixmap.scaledToHeight(350)
+
+        self.ui.label_img = QLabel(self.ui)
+        self.ui.label_img.setObjectName("cat_image")
+        self.ui.label_img.setPixmap(self.ui.pixmap2)
+        self.ui.label_img.move(0,30)
+        self.ui.resize(self.ui.pixmap2.width()+50, self.ui.pixmap2.height()+50)
+
 
     def get_cat_url(self) -> str:
         rep = requests.get(f"https://api.thecatapi.com/v1/images/search")
         catimage_dict = json.loads(rep.content)
         cat_url = catimage_dict[0]['url']
+
         return cat_url
 
-    def change_cat_image(self) -> None:
+    def get_cat_image_data(self) -> str:
         url = self.get_cat_url()
         request_site = Request(url, headers={"User-Agent": "Mozilla/5.0"})
         data = urllib.request.urlopen(request_site).read()
 
-        self.pixmap = QPixmap()
-        self.pixmap.loadFromData(data)
-        self.pixmap2 = self.pixmap.scaledToHeight(350)
-        self.label_img.setPixmap(self.pixmap2)
+        return data
 
-        self.parent().resize(self.pixmap2.width(), 400)
+    def change_cat_image(self) -> None:
+        data = self.get_cat_image_data()
 
-        self.print_pixel()
-
-    # def get_pixel(self) -> None:
-    #     x = event.pos().x()
-    #     y = event.pos().y()
-    #
-    #     img = self.pixmap2.toImage()
-    #
-
+        pixmap = QPixmap()
+        pixmap.loadFromData(data)
+        self.ui.pixmap2 = pixmap.scaledToHeight(350)
+        self.ui.label_img.setPixmap(self.ui.pixmap2)
+        self.ui.resize(self.ui.pixmap2.width(), self.ui.pixmap2.height())
 
     def print_pixel(self) -> None:
-        img = self.pixmap2.toImage()
+        img = self.ui.pixmap2.toImage()
         for x in range(0, img.width()):
            for y in range(0, img.height()):
                c = img.pixel(x, y)
                colors = QColor(c).getRgbF()
                print("(%s,%s) = %s" % (x, y, colors))
+
+   # def get_pixel(self) -> None:
+   #     x = event.pos().x()
+   #     y = event.pos().y()
+   #
+   #     img = self.pixmap2.toImage()
+

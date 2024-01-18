@@ -11,19 +11,21 @@ import requests
 import json
 
 # _____ UI includes _____
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QWidget, QTabWidget
+
 from PyQt6 import QtCore
 
 from interface import MainWindow
 from cat import CatImage
+from gif_generator import gifGenerator
 
 # __________________________________________________
 # Variables.
 # __________________________________________________
 api_key = "live_BbUk9mOGIFUrRHGQJxGylLmpxWeokjH5KfZwqicmEyja0B1eAX583X3SylYunpVF"
 url_api1 = "https://cataas.com/cat"
-window_height = 400
-window_width = 350
+window_height = 500
+window_width = 750
 
 # __________________________________________________
 # Func.
@@ -39,16 +41,25 @@ def main() -> None:
     app_name = "Image Editor"
 
     window = MainWindow(app_name)
+    window.resize(window_width, window_height)
 
-    cat = CatImage("Cat", window, QtCore.QPoint(0, 50))
+    cat = CatImage("Cat", window, QtCore.QPoint(0, 10))
+    gif = gifGenerator("gif", window, QtCore.QPoint(0, 10))
 
-    window.button.clicked.connect(cat.change_cat_image)
-    cat.print_pixel()
+    window.addTab(gif.ui, "Gif Generator")
+    window.addTab(cat.ui, "Image Editor")
 
-    window.resize(cat.pixmap2.width(),window_height)
+    # ------------------ UI CALLBACK ------------------
+    cat.ui.button.clicked.connect(cat.change_cat_image)
+    gif.ui.output_button.clicked.connect(gif.select_output_path)
+    gif.ui.import_button.clicked.connect(gif.select_images)
+    gif.ui.output_path_label.textChanged.connect(gif.update_output_path)
+
+    # cat.print_pixel()
 
     window.show()
     app.exec()
+
 
 if __name__ == "__main__":
     main()
