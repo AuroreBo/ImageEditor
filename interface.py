@@ -1,7 +1,4 @@
-from PyQt6.QtWidgets import QApplication, QTabWidget, QLabel, QPushButton
-from PyQt6.QtGui import QImage, QPixmap
-from PyQt6 import QtCore
-
+from PyQt6.QtWidgets import QTabWidget
 
 class MainWindow(QTabWidget):
     """Main window"""

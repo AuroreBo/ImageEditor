@@ -38,7 +38,7 @@ window_width = 750
 def main() -> None:
 
     app = QApplication([])
-    app_name = "Image Editor"
+    app_name = "Gif Generator"
 
     window = MainWindow(app_name)
     window.resize(window_width, window_height)
@@ -54,6 +54,8 @@ def main() -> None:
     gif.ui.output_button.clicked.connect(gif.select_output_path)
     gif.ui.import_button.clicked.connect(gif.select_images)
     gif.ui.output_path_label.textChanged.connect(gif.update_output_path)
+    gif.ui.delete_button.clicked.connect(gif.delete_images)
+    gif.ui.process_button.clicked.connect(gif.process_gif)
 
     # cat.print_pixel()
 
