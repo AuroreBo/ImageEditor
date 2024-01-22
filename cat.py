@@ -22,6 +22,9 @@ class CatImage:
 
         self.setup_ui(img_data)
 
+        # ------------------ UI CALLBACK ------------------
+        self.ui.button.clicked.connect(self.change_cat_image)
+
     def setup_ui(self, p_data_img):
         self.ui.button = QPushButton(self.ui)
         self.ui.button.setObjectName("button_generate")
