@@ -24,8 +24,8 @@ from gif_generator import gifGenerator
 # __________________________________________________
 api_key = "live_BbUk9mOGIFUrRHGQJxGylLmpxWeokjH5KfZwqicmEyja0B1eAX583X3SylYunpVF"
 url_api1 = "https://cataas.com/cat"
-window_height = 500
-window_width = 750
+window_height = 460
+window_width = 580
 
 # __________________________________________________
 # Func.
@@ -39,6 +39,10 @@ def main() -> None:
 
     app = QApplication([])
     app_name = "Gif Generator"
+
+    with open("style/SpyBot.qss", "r") as f:
+        _style = f.read()
+        app.setStyleSheet(_style)
 
     window = MainWindow(app_name)
     window.resize(window_width, window_height)

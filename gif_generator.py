@@ -24,6 +24,15 @@ from PyQt6 import QtCore
 import imageio
 from PIL import Image
 from pathlib import Path
+from enum import Enum
+
+
+
+class TableColumnsImages(Enum):
+    """Image table columns enumeration."""
+
+    PREVIEW = 0
+    PATH = 1
 
 class gifGenerator:
 
@@ -49,6 +58,7 @@ class gifGenerator:
         self.ui.import_button.clicked.connect(self.select_images)
         self.ui.output_path_label.textChanged.connect(self.update_output_path)
         self.ui.delete_button.clicked.connect(self.delete_images)
+        self.ui.select_all_button.clicked.connect(self.select_all_images)
         self.ui.process_button.clicked.connect(self.process_gif)
 
         self.ui.duration_text.textChanged.connect(self.update_duration)
@@ -67,9 +77,25 @@ class gifGenerator:
     def select_images(self):
         filter = "*.png *.xpm *.jpg"
         imgs = QFileDialog.getOpenFileNames(self.parent, "Select Images", ".", filter)
+
         for img in imgs[0]:
             self.img_list.append(img)
-            self.ui.image_tab.addItem(img)
+
+        self.add_table()
+
+    def add_table(self):
+        for img in self.img_list:
+            table_row = self.ui.image_tab.rowCount()
+            self.ui.image_tab.insertRow(table_row)
+            self.ui.image_tab.verticalHeader().setDefaultSectionSize(50)
+
+            pixmap = QPixmap(img)
+            pixmap = pixmap.scaledToHeight(50)
+            img_preview = QLabel()
+            img_preview.setPixmap(pixmap)
+
+            self.ui.image_tab.setCellWidget(table_row, TableColumnsImages.PREVIEW.value, img_preview)
+            self.ui.image_tab.setItem(table_row, TableColumnsImages.PATH.value, QTableWidgetItem(img))
 
     def delete_images(self):
         items = self.ui.image_tab.selectedItems()
@@ -78,7 +104,10 @@ class gifGenerator:
         for item in items:
             id = self.ui.image_tab.row(item)
             self.img_list.remove(self.img_list[id])
-            self.ui.image_tab.takeItem(id)
+            self.ui.image_tab.removeRow(id)
+
+    def select_all_images(self):
+        self.ui.image_tab.selectAll()
 
     def process_gif(self):
         images = []
@@ -132,51 +161,66 @@ class gifGenerator:
         self.ui.import_button.move(5, 50)
         self.ui.import_button.setText("Select images")
 
-        self.ui.image_tab = QListWidget(self.ui)
-        self.ui.image_tab.resize(300, 300)
+        self.ui.image_tab = QTableWidget(self.ui)
+        self.ui.image_tab.resize(450, 300)
         self.ui.image_tab.move(5, 80)
+
+        self.ui.image_tab.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.ui.image_tab.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+
+        self.ui.image_tab.setColumnCount(2)
+        self.ui.image_tab.setColumnWidth(0, 100)
+        self.ui.image_tab.setColumnWidth(1, 325)
+
+        headers = ["PREVIEW","PATH"]
+        self.ui.image_tab.setHorizontalHeaderLabels(headers)
         self.ui.image_tab.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
+
+        self.ui.select_all_button = QPushButton(self.ui)
+        self.ui.select_all_button.resize(75, 30)
+        self.ui.select_all_button.move(310, 50)
+        self.ui.select_all_button.setText("Select All")
 
         self.ui.delete_button = QPushButton(self.ui)
         self.ui.delete_button.resize(65,30)
-        self.ui.delete_button.move(240, 50)
+        self.ui.delete_button.move(390, 50)
         self.ui.delete_button.setText("Delete")
 
         self.ui.process_button = QPushButton(self.ui)
         self.ui.process_button.resize(65, 30)
-        self.ui.process_button.move(240, 385)
+        self.ui.process_button.move(390, 385)
         self.ui.process_button.setText("Process")
 
         self.ui.duration_label = QLabel(self.ui)
-        self.ui.duration_label.move(315, 50)
+        self.ui.duration_label.move(460, 60)
         self.ui.duration_label.setText("Duration (sec):")
 
         self.ui.duration_text = QLineEdit(self.ui)
         self.ui.duration_text.resize(60, 25)
-        self.ui.duration_text.move(315, 70)
+        self.ui.duration_text.move(460, 80)
         self.ui.duration_text.setText(str(self.duration))
 
         self.ui.size_label = QLabel(self.ui)
-        self.ui.size_label.move(315, 100)
+        self.ui.size_label.move(460, 110)
         self.ui.size_label.setText("Size (pixel):")
 
         self.ui.width_label = QLabel(self.ui)
-        self.ui.width_label.move(315, 125)
+        self.ui.width_label.move(460, 135)
         self.ui.width_label.setText("W")
         self.ui.width_text = QLineEdit(self.ui)
         self.ui.width_text.resize(45, 25)
-        self.ui.width_text.move(330, 120)
+        self.ui.width_text.move(490, 130)
         self.ui.width_text.setText(str(self.width))
 
         self.ui.height_label = QLabel(self.ui)
-        self.ui.height_label.move(315, 155)
+        self.ui.height_label.move(460, 165)
         self.ui.height_label.setText("H")
         self.ui.height_text = QLineEdit(self.ui)
         self.ui.height_text.resize(45, 25)
-        self.ui.height_text.move(330, 150)
+        self.ui.height_text.move(490, 160)
         self.ui.height_text.setText(str(self.height))
 
         self.ui.loop_checkbox = QCheckBox(self.ui)
-        self.ui.loop_checkbox.move(315, 180)
+        self.ui.loop_checkbox.move(460, 190)
         self.ui.loop_checkbox.setText("Looping")
         self.ui.loop_checkbox.setChecked(True)
