@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QHeaderView,
 )
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
@@ -24,7 +25,10 @@ from PyQt6 import QtCore
 import imageio
 from PIL import Image
 from pathlib import Path
+
 from enum import Enum
+import os
+import shutil
 
 
 
@@ -45,11 +49,12 @@ class gifGenerator:
 
         self.parent: QTabWidget = parent
         self.output_path: str = ""
-        self.img_list: [str] = []
         self.duration: float = 0.3
         self.loop: bool = True
         self.width: int = 256
         self.height: int = 256
+
+        self.frames: [] = []
 
         self.setup_ui()
 
@@ -60,15 +65,20 @@ class gifGenerator:
         self.ui.delete_button.clicked.connect(self.delete_images)
         self.ui.select_all_button.clicked.connect(self.select_all_images)
         self.ui.process_button.clicked.connect(self.process_gif)
+        self.ui.debug_button.clicked.connect(self.setup_color_morphing)
 
         self.ui.duration_text.textChanged.connect(self.update_duration)
         self.ui.width_text.textChanged.connect(self.update_width)
         self.ui.height_text.textChanged.connect(self.update_height)
         self.ui.loop_checkbox.stateChanged.connect(self.update_loop)
 
+        self.ui.image_tab.verticalHeader().setSectionsMovable(True)
+
     def select_output_path(self):
-         self.output_path = QFileDialog.getSaveFileName(self.ui, "Save file location", "", "*.gif")
-         self.ui.output_path_label.setText(self.output_path[0])
+         path = QFileDialog.getSaveFileName(self.ui, "Save file location", "", "*.gif")
+         if path:
+            self.output_path = path[0]
+            self.ui.output_path_label.setText(self.output_path)
 
     def update_output_path(self):
         if self.ui.output_path_label.text():
@@ -79,23 +89,20 @@ class gifGenerator:
         imgs = QFileDialog.getOpenFileNames(self.parent, "Select Images", ".", filter)
 
         for img in imgs[0]:
-            self.img_list.append(img)
+            self.add_table(img)
 
-        self.add_table()
+    def add_table(self, p_path : str):
+        table_row = self.ui.image_tab.rowCount()
+        self.ui.image_tab.insertRow(table_row)
+        self.ui.image_tab.verticalHeader().setDefaultSectionSize(50)
 
-    def add_table(self):
-        for img in self.img_list:
-            table_row = self.ui.image_tab.rowCount()
-            self.ui.image_tab.insertRow(table_row)
-            self.ui.image_tab.verticalHeader().setDefaultSectionSize(50)
+        pixmap = QPixmap(p_path)
+        pixmap = pixmap.scaledToHeight(50)
+        img_preview = QLabel()
+        img_preview.setPixmap(pixmap)
 
-            pixmap = QPixmap(img)
-            pixmap = pixmap.scaledToHeight(50)
-            img_preview = QLabel()
-            img_preview.setPixmap(pixmap)
-
-            self.ui.image_tab.setCellWidget(table_row, TableColumnsImages.PREVIEW.value, img_preview)
-            self.ui.image_tab.setItem(table_row, TableColumnsImages.PATH.value, QTableWidgetItem(img))
+        self.ui.image_tab.setCellWidget(table_row, TableColumnsImages.PREVIEW.value, img_preview)
+        self.ui.image_tab.setItem(table_row, TableColumnsImages.PATH.value, QTableWidgetItem(p_path))
 
     def delete_images(self):
         items = self.ui.image_tab.selectedItems()
@@ -103,7 +110,6 @@ class gifGenerator:
             return
         for item in items:
             id = self.ui.image_tab.row(item)
-            self.img_list.remove(self.img_list[id])
             self.ui.image_tab.removeRow(id)
 
     def select_all_images(self):
@@ -116,18 +122,33 @@ class gifGenerator:
         if not self.loop:
             loop = 1
 
+        if self.output_path:
+            try:
+                self.setup_images_data_list()
+                imageio.mimsave(self.output_path, self.frames, loop=loop, duration=self.duration)
+                print(f"[Success] Gif exported at : {self.output_path}")
+            except:
+                print("[Error] Error processing gif")
+
+    def setup_images_data_list(self):
+        # be sure our list is empty
+        self.frames = []
+
+        count = self.ui.image_tab.rowCount()
+        header = self.ui.image_tab.verticalHeader()
         size = (self.width, self.height)
 
-        if self.img_list and self.output_path:
-            print(f"list = {self.img_list}")
-            try:
-                for img in self.img_list:
-                    image = imageio.v2.imread(img)
-                    image = Image.fromarray(image).resize(size)
-                    images.append(image)
-                imageio.mimsave(self.output_path, images, loop=loop, duration=self.duration)
-            except:
-                print("error processing gif")
+        try:
+            for vrow in range(count):
+                row = header.logicalIndex(vrow)
+                current_path = self.ui.image_tab.item(row, TableColumnsImages.PATH.value).text()
+
+                image = imageio.v2.imread(current_path)
+                image = Image.fromarray(image).resize(size)
+                self.frames.append(image)
+            print(f"[Success] Images list done {self.frames}")
+        except:
+            print("[Error] Error setup list")
 
     def update_duration(self):
         if self.ui.duration_text.text():
@@ -145,6 +166,40 @@ class gifGenerator:
 
     def update_loop(self):
         self.loop = self.ui.loop_checkbox.isChecked()
+
+    def setup_color_morphing(self):
+        if self.output_path:
+            path = Path(self.output_path)
+            temp_folder_path = str(path.parent.absolute())+"/temp"
+            print(temp_folder_path)
+
+            # Creation of a temporary folder to stock interpolating images
+            try:
+                os.mkdir(temp_folder_path)
+                print("[Success] Folder created.")
+            except:
+                print("[Error] Couldn't creating Folder.")
+
+            self.setup_images_data_list()
+
+            for x in range(self.width):
+                for y in range(self.height):
+                    print(x,y)
+                    pixel_img_a = self.frames[0].getRGB(x,y)
+                    # pixel_img_b = self.frames[1].getPixel(x, y)
+                    # print(pixel_img_a)
+                    # print(pixel_img_b)
+
+            # Delete the temporary folder to stock interpolating images
+            try:
+                # os.rmdir(temp_folder_path)
+                shutil.rmtree(temp_folder_path)
+                print("[Success] Folder deleted.")
+            except:
+                print("[Error] Couldn't delete folder.")
+
+
+
     # ------------------- UI -------------------------
     def setup_ui(self):
         self.ui.output_button = QPushButton(self.ui)
@@ -171,6 +226,7 @@ class gifGenerator:
         self.ui.image_tab.setColumnCount(2)
         self.ui.image_tab.setColumnWidth(0, 100)
         self.ui.image_tab.setColumnWidth(1, 325)
+        self.ui.image_tab.horizontalHeader().setStretchLastSection(True)
 
         headers = ["PREVIEW","PATH"]
         self.ui.image_tab.setHorizontalHeaderLabels(headers)
@@ -224,3 +280,7 @@ class gifGenerator:
         self.ui.loop_checkbox.move(460, 190)
         self.ui.loop_checkbox.setText("Looping")
         self.ui.loop_checkbox.setChecked(True)
+
+        self.ui.debug_button = QPushButton(self.ui)
+        self.ui.debug_button.setText("Debug")
+        self.ui.debug_button.move(460, 300)
