@@ -150,6 +150,7 @@ class gifGenerator:
         except:
             print("[Error] Error setup list")
 
+
     def update_duration(self):
         if self.ui.duration_text.text():
             duration = float(self.ui.duration_text.text())
@@ -169,6 +170,7 @@ class gifGenerator:
 
     def setup_color_morphing(self):
         if self.output_path:
+
             path = Path(self.output_path)
             temp_folder_path = str(path.parent.absolute())+"/temp"
             print(temp_folder_path)
@@ -180,25 +182,61 @@ class gifGenerator:
             except:
                 print("[Error] Couldn't creating Folder.")
 
-            self.setup_images_data_list()
+            path1 = self.ui.image_tab.item(0, TableColumnsImages.PATH.value).text()
+            path2 = self.ui.image_tab.item(1, TableColumnsImages.PATH.value).text()
 
-            for x in range(self.width):
-                for y in range(self.height):
-                    print(x,y)
-                    pixel_img_a = self.frames[0].getRGB(x,y)
-                    # pixel_img_b = self.frames[1].getPixel(x, y)
-                    # print(pixel_img_a)
-                    # print(pixel_img_b)
+            self.get_interpolated_frame(path1, path2, temp_folder_path)
+
+
 
             # Delete the temporary folder to stock interpolating images
-            try:
-                # os.rmdir(temp_folder_path)
-                shutil.rmtree(temp_folder_path)
-                print("[Success] Folder deleted.")
-            except:
-                print("[Error] Couldn't delete folder.")
+            # try:
+            #     # os.rmdir(temp_folder_path)
+            #     shutil.rmtree(temp_folder_path)
+            #     print("[Success] Folder deleted.")
+            # except:
+            #     print("[Error] Couldn't delete folder.")
 
+    def get_interpolated_frame(self, p_path_image1 : str, p_path_image2 : str, p_output_path : str) -> None:
+        """ Save interpolated image in a temp folder """
+        im1 = Image.open(p_path_image1)
+        resized_img1 = im1.resize((self.width, self.height))
+        px1 = resized_img1.load()
 
+        im2 = Image.open(p_path_image2)
+        resized_img2 = im2.resize((self.width, self.height))
+        px2 = resized_img2.load()
+
+        int_img = Image.new("RGB", (self.width, self.height))
+        try:
+            for x in range(self.width):
+                for y in range(self.height):
+                    pixel1 = px1[x, y]
+                    pixel2 = px2[x, y]
+                    # print(f"{pixel1} / {pixel2}")
+
+                    new_pixel_value = self.compute_intermediate_pixel(pixel1, pixel2)
+                    # print(new_pixel_value)
+                    int_img.putpixel((x,y), new_pixel_value)
+            if p_output_path:
+                output_path = p_output_path+"/interpolated_img.png"
+                int_img.save(output_path)
+        except:
+            print("[Error] Error during processing image")
+
+    def compute_intermediate_pixel(self, p_pixel1 : tuple, p_pixel2: tuple) -> tuple:
+        r = self.compute_channel(p_pixel1[0], p_pixel2[0])
+        g = self.compute_channel(p_pixel1[1], p_pixel2[1])
+        b = self.compute_channel(p_pixel1[2], p_pixel2[2])
+
+        return (r,g,b,255)
+
+    def compute_channel(self, p_v1 : int, p_v2: int) -> int:
+        if p_v1 > p_v2:
+            val = p_v2 + ((p_v1 - p_v2) * 0.5)
+        else:
+            val = p_v1 + ((p_v2 - p_v1) * 0.5)
+        return int(val)
 
     # ------------------- UI -------------------------
     def setup_ui(self):
