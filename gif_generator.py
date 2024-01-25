@@ -207,7 +207,11 @@ class gifGenerator:
         resized_img2 = im2.resize((self.width, self.height))
         px2 = resized_img2.load()
 
-        int_img = Image.new("RGB", (self.width, self.height))
+        nb_iteration = 6
+        img_list = []
+        for i in range(nb_iteration):
+            int_img = Image.new("RGB", (self.width, self.height))
+            img_list.append(int_img)
         try:
             for x in range(self.width):
                 for y in range(self.height):
@@ -215,27 +219,35 @@ class gifGenerator:
                     pixel2 = px2[x, y]
                     # print(f"{pixel1} / {pixel2}")
 
-                    new_pixel_value = self.compute_intermediate_pixel(pixel1, pixel2)
-                    # print(new_pixel_value)
-                    int_img.putpixel((x,y), new_pixel_value)
+                    new_pixel_values = self.compute_intermediate_pixel(pixel1, pixel2, nb_iteration)
+
+                    for i in range(nb_iteration):
+                        img = img_list[i]
+                        img.putpixel((x,y), new_pixel_values[i])
             if p_output_path:
-                output_path = p_output_path+"/interpolated_img.png"
-                int_img.save(output_path)
+                for i in range(nb_iteration):
+                    img = img_list[i]
+                    name = f"/interpolated_img{i}.png"
+                    output_path = p_output_path+name
+                    img.save(output_path)
         except:
             print("[Error] Error during processing image")
 
-    def compute_intermediate_pixel(self, p_pixel1 : tuple, p_pixel2: tuple) -> tuple:
-        r = self.compute_channel(p_pixel1[0], p_pixel2[0])
-        g = self.compute_channel(p_pixel1[1], p_pixel2[1])
-        b = self.compute_channel(p_pixel1[2], p_pixel2[2])
+    def compute_intermediate_pixel(self, p_pixel1 : tuple, p_pixel2: tuple, p_iteration: int) -> [tuple]:
+        colors = []
+        for i in range(p_iteration):
+            r = self.compute_channel(p_pixel1[0], p_pixel2[0], i, p_iteration)
+            g = self.compute_channel(p_pixel1[1], p_pixel2[1], i, p_iteration)
+            b = self.compute_channel(p_pixel1[2], p_pixel2[2], i, p_iteration)
+            colors.append((r,g,b,255))
 
-        return (r,g,b,255)
+        return colors
 
-    def compute_channel(self, p_v1 : int, p_v2: int) -> int:
+    def compute_channel(self, p_v1 : int, p_v2: int, p_current_step: int, p_total_step: int) -> int:
         if p_v1 > p_v2:
-            val = p_v2 + ((p_v1 - p_v2) * 0.5)
+            val = p_v2 + (((p_v1 - p_v2)/ p_total_step) * (p_current_step+1))
         else:
-            val = p_v1 + ((p_v2 - p_v1) * 0.5)
+            val = p_v1 + (((p_v2 - p_v1)/ p_total_step) * (p_current_step+1))
         return int(val)
 
     # ------------------- UI -------------------------
