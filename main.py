@@ -25,7 +25,7 @@ from gif_generator import gifGenerator
 api_key = "live_BbUk9mOGIFUrRHGQJxGylLmpxWeokjH5KfZwqicmEyja0B1eAX583X3SylYunpVF"
 url_api1 = "https://cataas.com/cat"
 window_height = 460
-window_width = 580
+window_width = 840
 
 # __________________________________________________
 # Func.

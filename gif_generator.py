@@ -2,22 +2,19 @@ from PyQt6.QtWidgets import (
     QApplication,
     QWidget,
     QTabWidget,
+    QGroupBox,
     QLabel,
     QLineEdit,
-    QListWidget,
     QAbstractItemView,
     QCheckBox,
-    QColorDialog,
-    QComboBox,
+    QVBoxLayout,
+    QHBoxLayout,
     QFileDialog,
-    QFontComboBox,
     QLabel,
-    QListWidgetItem,
-    QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
-    QHeaderView,
+    QSpacerItem,
 )
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6 import QtCore
@@ -55,11 +52,10 @@ class gifGenerator:
         self.height: int = 256
 
         self.frames: [] = []
-        self.nb_frames: int = 3
-        self.enable_interpolation: bool = True
         self.path_temp_folder: str = ""
-        self.delete_temp_folder: bool = False
-
+        self.nb_frames: int = 3
+        self.enable_fade: bool = False
+        self.delete_temp_folder: bool = True
 
         self.setup_ui()
 
@@ -70,12 +66,17 @@ class gifGenerator:
         self.ui.delete_button.clicked.connect(self.delete_images)
         self.ui.select_all_button.clicked.connect(self.select_all_images)
         self.ui.process_button.clicked.connect(self.process_gif)
-        self.ui.debug_button.clicked.connect(self.setup_fading)
+
+        # self.ui.debug_button.clicked.connect(self.setup_fading)
 
         self.ui.duration_text.textChanged.connect(self.update_duration)
         self.ui.width_text.textChanged.connect(self.update_width)
         self.ui.height_text.textChanged.connect(self.update_height)
         self.ui.loop_checkbox.stateChanged.connect(self.update_loop)
+
+        self.ui.fade_checkbox.stateChanged.connect(self.update_fade_state)
+        self.ui.nb_iteration_text.textChanged.connect(self.update_nb_iteration)
+        self.ui.folder_checkbox.stateChanged.connect(self.update_folder_state)
 
         self.ui.image_tab.verticalHeader().setSectionsMovable(True)
 
@@ -129,15 +130,25 @@ class gifGenerator:
 
         if self.output_path:
             # try:
-            if self.enable_interpolation:
-
+            if self.enable_fade:
                 path = Path(self.output_path)
                 folder_name = path.parent.absolute()
                 file_name = path.stem
                 output_path_with_fade = f"{folder_name}\{file_name}_fade.gif"
 
+                self.path_temp_folder =f"{folder_name}/{file_name}_temp"
+                print(self.path_temp_folder)
+
+                # Creation of a temporary folder to stock interpolating images
+                try:
+                    os.mkdir(self.path_temp_folder)
+                    print("[Success] Folder created.")
+                except:
+                    print("[Error] Couldn't creating Folder.")
+
+
                 #process interpolation
-                self.setup_fading(self.frames, file_name)
+                self.setup_fading(self.frames)
                 #process new list with interpolated frames
                 frames_with_fade = self.compute_new_frame_list(self.frames)
                 imageio.mimsave(output_path_with_fade, frames_with_fade, loop=loop, duration=self.duration)
@@ -145,6 +156,16 @@ class gifGenerator:
 
             imageio.mimsave(self.output_path, self.frames, loop=loop, duration=self.duration)
             print(f"[Success] Gif exported at : {self.output_path}")
+
+            # Delete the temporary folder to stock interpolating images
+            if not self.delete_temp_folder:
+                try:
+                    # os.rmdir(temp_folder_path)
+                    shutil.rmtree(self.path_temp_folder)
+                    print("[Success] Folder deleted.")
+                except:
+                    print("[Error] Couldn't delete folder.")
+
             # except:
             #     print("[Error] Error processing gif")
 
@@ -188,54 +209,54 @@ class gifGenerator:
 
     def update_duration(self):
         if self.ui.duration_text.text():
-            duration = float(self.ui.duration_text.text())
-            # conversion from sec
-            self.duration = duration * 1000
+            try:
+                duration = float(self.ui.duration_text.text())
+                # conversion from sec
+                self.duration = duration * 1000
+            except:
+                print("[Error] Not a number in line edit")
 
     def update_width(self):
         if self.ui.width_text.text():
-            self.width = int(self.ui.width_text.text())
+            try:
+                self.width = int(self.ui.width_text.text())
+            except:
+                print("[Error] Not a number in line edit")
 
     def update_height(self):
         if self.ui.height_text.text():
-            self.height = int(self.ui.height_text.text())
+            try:
+                self.height = int(self.ui.height_text.text())
+            except:
+                print("[Error] Not a number in line edit")
 
     def update_loop(self):
         self.loop = self.ui.loop_checkbox.isChecked()
 
-    def setup_fading(self, p_frames:[], p_name: str):
-        if self.output_path:
-            path = Path(self.output_path)
-            self.path_temp_folder = str(path.parent.absolute())+"/"+p_name+"_temp"
-            print(self.path_temp_folder)
+    def update_fade_state(self):
+        self.enable_fade = self.ui.fade_checkbox.isChecked()
 
-            # Creation of a temporary folder to stock interpolating images
+    def update_nb_iteration(self):
+        if self.ui.nb_iteration_text.text():
             try:
-                os.mkdir(self.path_temp_folder)
-                print("[Success] Folder created.")
+                self.nb_frames = int(self.ui.nb_iteration_text.text())
             except:
-                print("[Error] Couldn't creating Folder.")
+                print("[Error] Not a number in line edit")
+    def update_folder_state(self):
+        self.delete_temp_folder = self.ui.folder_checkbox.isChecked()
+    def setup_fading(self, p_frames:[]):
 
-            #  // TEMP SETUP FOR DEBUG PUSHBUTTON //
-            self.frames = self.setup_key_images_data_list()
-            p_frames = self.frames
-            # // _______________________________//
-            total_frame = len(p_frames)
-            for i in range(total_frame):
-                if i+1 < total_frame:
-                    path1 = self.ui.image_tab.item(i, TableColumnsImages.PATH.value).text()
-                    path2 = self.ui.image_tab.item(i+1, TableColumnsImages.PATH.value).text()
-                    self.compute_interpolated_frame(path1, path2, i)
+        # #  // TEMP SETUP FOR DEBUG PUSHBUTTON //
+        # self.frames = self.setup_key_images_data_list()
+        # p_frames = self.frames
+        # # // _______________________________//
 
-
-            # Delete the temporary folder to stock interpolating images
-            if self.delete_temp_folder:
-                try:
-                    # os.rmdir(temp_folder_path)
-                    shutil.rmtree(self.path_temp_folder)
-                    print("[Success] Folder deleted.")
-                except:
-                    print("[Error] Couldn't delete folder.")
+        total_frame = len(p_frames)
+        for i in range(total_frame):
+            if i+1 < total_frame:
+                path1 = self.ui.image_tab.item(i, TableColumnsImages.PATH.value).text()
+                path2 = self.ui.image_tab.item(i+1, TableColumnsImages.PATH.value).text()
+                self.compute_interpolated_frame(path1, path2, i)
 
     def compute_interpolated_frame(self, p_path_image1 : str, p_path_image2 : str, p_step: int) -> None:
         """ Save interpolated image in a temp folder """
@@ -350,40 +371,115 @@ class gifGenerator:
         self.ui.process_button.move(390, 385)
         self.ui.process_button.setText("Process")
 
+        # ------------------- SETTINGS LAYOUT -------------------
+        self.ui.settings_layout = QVBoxLayout(self.ui)
+        self.ui.group_settings = QGroupBox(self.ui)
+        self.ui.group_settings.setTitle("Settings")
+        self.ui.group_settings.resize(350, 340)
+        self.ui.group_settings.move(460, 40)
+        self.ui.group_settings.setLayout(self.ui.settings_layout)
+
+        # ------------------- GENERAL SETTINGS -------------------
+        self.ui.general_layout = QVBoxLayout(self.ui)
+        self.ui.group_general = QGroupBox(self.ui)
+        self.ui.group_general.setTitle("General")
+        self.ui.group_general.resize(160,300)
+        self.ui.group_general.move(470, 55)
+        self.ui.group_general.setLayout(self.ui.general_layout)
+
         self.ui.duration_label = QLabel(self.ui)
         self.ui.duration_label.move(460, 60)
-        self.ui.duration_label.setText("Duration (sec):")
+        self.ui.duration_label.setText("Duration of 1 frame (sec):")
+        self.ui.general_layout.addWidget(self.ui.duration_label)
 
         self.ui.duration_text = QLineEdit(self.ui)
         self.ui.duration_text.resize(60, 25)
         self.ui.duration_text.move(460, 80)
         self.ui.duration_text.setText(str(self.duration))
+        self.ui.general_layout.addWidget(self.ui.duration_text)
 
         self.ui.size_label = QLabel(self.ui)
         self.ui.size_label.move(460, 110)
         self.ui.size_label.setText("Size (pixel):")
+        self.ui.general_layout.addWidget(self.ui.size_label)
+
+        width_layout = QHBoxLayout(self.ui)
+        width_group = QGroupBox(self.ui)
+        width_group.setLayout(width_layout)
+        width_group.setStyleSheet("border:0;")
+        self.ui.general_layout.addWidget(width_group)
 
         self.ui.width_label = QLabel(self.ui)
         self.ui.width_label.move(460, 135)
         self.ui.width_label.setText("W")
+        width_layout.addWidget(self.ui.width_label)
+
         self.ui.width_text = QLineEdit(self.ui)
         self.ui.width_text.resize(45, 25)
         self.ui.width_text.move(490, 130)
         self.ui.width_text.setText(str(self.width))
+        width_layout.addWidget(self.ui.width_text)
+
+        height_layout = QHBoxLayout(self.ui)
+        height_group = QGroupBox(self.ui)
+        height_group.setLayout(height_layout)
+        height_group.setStyleSheet("border:0;")
+        self.ui.general_layout.addWidget(height_group)
 
         self.ui.height_label = QLabel(self.ui)
         self.ui.height_label.move(460, 165)
         self.ui.height_label.setText("H")
+        height_layout.addWidget(self.ui.height_label)
+
         self.ui.height_text = QLineEdit(self.ui)
         self.ui.height_text.resize(45, 25)
         self.ui.height_text.move(490, 160)
         self.ui.height_text.setText(str(self.height))
+        height_layout.addWidget(self.ui.height_text)
 
         self.ui.loop_checkbox = QCheckBox(self.ui)
         self.ui.loop_checkbox.move(460, 190)
         self.ui.loop_checkbox.setText("Looping")
         self.ui.loop_checkbox.setChecked(True)
+        self.ui.general_layout.addWidget(self.ui.loop_checkbox)
 
-        self.ui.debug_button = QPushButton(self.ui)
-        self.ui.debug_button.setText("Debug")
-        self.ui.debug_button.move(460, 300)
+        verticalSpacer1 = QSpacerItem(40, 100)
+        self.ui.general_layout.addItem(verticalSpacer1)
+
+        # ------------------- FADING SETTINGS -------------------
+        self.ui.fade_layout = QVBoxLayout(self.ui)
+        self.ui.group_fade = QGroupBox(self.ui)
+        self.ui.group_fade.setTitle("Fading")
+        self.ui.group_fade.resize(160, 300)
+        self.ui.group_fade.move(635, 55)
+        self.ui.group_fade.setLayout(self.ui.fade_layout)
+
+        self.ui.fade_checkbox = QCheckBox(self.ui)
+        self.ui.fade_checkbox.move(460, 190)
+        self.ui.fade_checkbox.setText("Enable fading")
+        self.ui.fade_checkbox.setChecked(False)
+        self.ui.fade_layout.addWidget(self.ui.fade_checkbox)
+
+        self.ui.nb_iteration_label = QLabel(self.ui)
+        self.ui.nb_iteration_label.move(460, 165)
+        self.ui.nb_iteration_label.setText("Number of iteration")
+        self.ui.fade_layout.addWidget(self.ui.nb_iteration_label)
+
+        self.ui.nb_iteration_text = QLineEdit(self.ui)
+        self.ui.nb_iteration_text.resize(45, 25)
+        self.ui.nb_iteration_text.move(490, 160)
+        self.ui.nb_iteration_text.setText(str(self.nb_frames))
+        self.ui.fade_layout.addWidget(self.ui.nb_iteration_text)
+
+        self.ui.folder_checkbox = QCheckBox(self.ui)
+        self.ui.folder_checkbox.move(460, 190)
+        self.ui.folder_checkbox.setText("Keep temp folder")
+        self.ui.folder_checkbox.setChecked(True)
+        self.ui.fade_layout.addWidget(self.ui.folder_checkbox)
+
+        verticalSpacer2 = QSpacerItem(40, 500)
+        self.ui.fade_layout.addItem(verticalSpacer2)
+
+        # self.ui.debug_button = QPushButton(self.ui)
+        # self.ui.debug_button.setText("Debug")
+        # self.ui.debug_button.move(460, 300)
