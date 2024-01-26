@@ -55,6 +55,11 @@ class gifGenerator:
         self.height: int = 256
 
         self.frames: [] = []
+        self.nb_frames: int = 3
+        self.enable_interpolation: bool = True
+        self.path_temp_folder: str = ""
+        self.delete_temp_folder: bool = False
+
 
         self.setup_ui()
 
@@ -65,7 +70,7 @@ class gifGenerator:
         self.ui.delete_button.clicked.connect(self.delete_images)
         self.ui.select_all_button.clicked.connect(self.select_all_images)
         self.ui.process_button.clicked.connect(self.process_gif)
-        self.ui.debug_button.clicked.connect(self.setup_color_morphing)
+        self.ui.debug_button.clicked.connect(self.setup_fading)
 
         self.ui.duration_text.textChanged.connect(self.update_duration)
         self.ui.width_text.textChanged.connect(self.update_width)
@@ -116,23 +121,36 @@ class gifGenerator:
         self.ui.image_tab.selectAll()
 
     def process_gif(self):
-        images = []
+        self.frames = self.setup_key_images_data_list()
 
         loop = 0
         if not self.loop:
             loop = 1
 
         if self.output_path:
-            try:
-                self.setup_images_data_list()
-                imageio.mimsave(self.output_path, self.frames, loop=loop, duration=self.duration)
-                print(f"[Success] Gif exported at : {self.output_path}")
-            except:
-                print("[Error] Error processing gif")
+            # try:
+            if self.enable_interpolation:
 
-    def setup_images_data_list(self):
+                path = Path(self.output_path)
+                folder_name = path.parent.absolute()
+                file_name = path.stem
+                output_path_with_fade = f"{folder_name}\{file_name}_fade.gif"
+
+                #process interpolation
+                self.setup_fading(self.frames, file_name)
+                #process new list with interpolated frames
+                frames_with_fade = self.compute_new_frame_list(self.frames)
+                imageio.mimsave(output_path_with_fade, frames_with_fade, loop=loop, duration=self.duration)
+                print(f"[Success] Gif exported at : {output_path_with_fade}")
+
+            imageio.mimsave(self.output_path, self.frames, loop=loop, duration=self.duration)
+            print(f"[Success] Gif exported at : {self.output_path}")
+            # except:
+            #     print("[Error] Error processing gif")
+
+    def setup_key_images_data_list(self) -> []:
         # be sure our list is empty
-        self.frames = []
+        frames = []
 
         count = self.ui.image_tab.rowCount()
         header = self.ui.image_tab.verticalHeader()
@@ -145,11 +163,28 @@ class gifGenerator:
 
                 image = imageio.v2.imread(current_path)
                 image = Image.fromarray(image).resize(size)
-                self.frames.append(image)
-            print(f"[Success] Images list done {self.frames}")
+                frames.append(image)
+            return frames
+            print(f"[Success] Images list done {frames}")
         except:
             print("[Error] Error setup list")
 
+    def compute_new_frame_list(self, p_frames) -> []:
+        new_frames_list = []
+        total_frames = len(p_frames)
+
+        # add key frames
+        for i in range(total_frames):
+            new_frames_list.append(p_frames[i])
+            if i+1 < total_frames:
+                #add interpolation frames
+                for j in range(self.nb_frames):
+                    current_path = f"{self.path_temp_folder}/folder_img{i}/img{j}.png"
+                    current_image = imageio.v2.imread(current_path)
+                    image = Image.fromarray(current_image)
+                    new_frames_list.append(image)
+
+        return new_frames_list
 
     def update_duration(self):
         if self.ui.duration_text.text():
@@ -168,36 +203,41 @@ class gifGenerator:
     def update_loop(self):
         self.loop = self.ui.loop_checkbox.isChecked()
 
-    def setup_color_morphing(self):
+    def setup_fading(self, p_frames:[], p_name: str):
         if self.output_path:
-
             path = Path(self.output_path)
-            temp_folder_path = str(path.parent.absolute())+"/temp"
-            print(temp_folder_path)
+            self.path_temp_folder = str(path.parent.absolute())+"/"+p_name+"_temp"
+            print(self.path_temp_folder)
 
             # Creation of a temporary folder to stock interpolating images
             try:
-                os.mkdir(temp_folder_path)
+                os.mkdir(self.path_temp_folder)
                 print("[Success] Folder created.")
             except:
                 print("[Error] Couldn't creating Folder.")
 
-            path1 = self.ui.image_tab.item(0, TableColumnsImages.PATH.value).text()
-            path2 = self.ui.image_tab.item(1, TableColumnsImages.PATH.value).text()
-
-            self.get_interpolated_frame(path1, path2, temp_folder_path)
-
+            #  // TEMP SETUP FOR DEBUG PUSHBUTTON //
+            self.frames = self.setup_key_images_data_list()
+            p_frames = self.frames
+            # // _______________________________//
+            total_frame = len(p_frames)
+            for i in range(total_frame):
+                if i+1 < total_frame:
+                    path1 = self.ui.image_tab.item(i, TableColumnsImages.PATH.value).text()
+                    path2 = self.ui.image_tab.item(i+1, TableColumnsImages.PATH.value).text()
+                    self.compute_interpolated_frame(path1, path2, i)
 
 
             # Delete the temporary folder to stock interpolating images
-            # try:
-            #     # os.rmdir(temp_folder_path)
-            #     shutil.rmtree(temp_folder_path)
-            #     print("[Success] Folder deleted.")
-            # except:
-            #     print("[Error] Couldn't delete folder.")
+            if self.delete_temp_folder:
+                try:
+                    # os.rmdir(temp_folder_path)
+                    shutil.rmtree(self.path_temp_folder)
+                    print("[Success] Folder deleted.")
+                except:
+                    print("[Error] Couldn't delete folder.")
 
-    def get_interpolated_frame(self, p_path_image1 : str, p_path_image2 : str, p_output_path : str) -> None:
+    def compute_interpolated_frame(self, p_path_image1 : str, p_path_image2 : str, p_step: int) -> None:
         """ Save interpolated image in a temp folder """
         im1 = Image.open(p_path_image1)
         resized_img1 = im1.resize((self.width, self.height))
@@ -207,11 +247,16 @@ class gifGenerator:
         resized_img2 = im2.resize((self.width, self.height))
         px2 = resized_img2.load()
 
-        nb_iteration = 6
         img_list = []
-        for i in range(nb_iteration):
+
+        folder_path = f"{self.path_temp_folder}/folder_img{p_step}"
+        os.mkdir(folder_path)
+
+        # Create new frames
+        for i in range(self.nb_frames):
             int_img = Image.new("RGB", (self.width, self.height))
             img_list.append(int_img)
+
         try:
             for x in range(self.width):
                 for y in range(self.height):
@@ -219,19 +264,27 @@ class gifGenerator:
                     pixel2 = px2[x, y]
                     # print(f"{pixel1} / {pixel2}")
 
-                    new_pixel_values = self.compute_intermediate_pixel(pixel1, pixel2, nb_iteration)
+                    new_pixel_values = self.compute_intermediate_pixel(pixel1, pixel2,   self.nb_frames)
 
-                    for i in range(nb_iteration):
+                    # Set pixels of frames
+                    for i in range(self.nb_frames):
                         img = img_list[i]
                         img.putpixel((x,y), new_pixel_values[i])
-            if p_output_path:
-                for i in range(nb_iteration):
-                    img = img_list[i]
-                    name = f"/interpolated_img{i}.png"
-                    output_path = p_output_path+name
-                    img.save(output_path)
         except:
             print("[Error] Error during processing image")
+
+        try:
+            if folder_path:
+                # Save frames
+                for i in range(self.nb_frames):
+                    img = img_list[i]
+                    name = f"/img{i}.png"
+                    output_path = folder_path + name
+                    img.save(output_path)
+                    print(f"[Success] Frame saved at {output_path}")
+
+        except:
+            print("[Error] Couldn't save interpolated images")
 
     def compute_intermediate_pixel(self, p_pixel1 : tuple, p_pixel2: tuple, p_iteration: int) -> [tuple]:
         colors = []
