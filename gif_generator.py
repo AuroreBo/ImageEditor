@@ -275,7 +275,7 @@ class gifGenerator:
 
         # Create new frames
         for i in range(self.nb_frames):
-            int_img = Image.new("RGB", (self.width, self.height))
+            int_img = Image.new("RGBA", (self.width, self.height))
             img_list.append(int_img)
 
         try:
