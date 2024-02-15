@@ -27,8 +27,6 @@ from enum import Enum
 import os
 import shutil
 
-
-
 class TableColumnsImages(Enum):
     """Image table columns enumeration."""
 
