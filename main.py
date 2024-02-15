@@ -22,8 +22,6 @@ from gif_generator import gifGenerator
 # __________________________________________________
 # Variables.
 # __________________________________________________
-api_key = "live_BbUk9mOGIFUrRHGQJxGylLmpxWeokjH5KfZwqicmEyja0B1eAX583X3SylYunpVF"
-url_api1 = "https://cataas.com/cat"
 window_height = 460
 window_width = 840
 
@@ -55,7 +53,6 @@ def main() -> None:
 
     window.show()
     app.exec()
-
 
 if __name__ == "__main__":
     main()

@@ -36,6 +36,7 @@ class TableColumnsImages(Enum):
     PATH = 1
 
 class gifGenerator:
+    """ Gif generator class. """
 
     def __init__(self, name: str, parent: QTabWidget, pos: QtCore.QPoint) -> None:
         # Init QWidget
@@ -80,24 +81,28 @@ class gifGenerator:
 
         self.ui.image_tab.verticalHeader().setSectionsMovable(True)
 
-    def select_output_path(self):
-         path = QFileDialog.getSaveFileName(self.ui, "Save file location", "", "*.gif")
-         if path:
+    def select_output_path(self) -> None:
+        """ Select output_path using file dialog. """
+        path = QFileDialog.getSaveFileName(self.ui, "Save file location", "", "*.gif")
+        if path:
             self.output_path = path[0]
             self.ui.output_path_label.setText(self.output_path)
 
-    def update_output_path(self):
+    def update_output_path(self) -> None:
+        """ Update output_path value. """
         if self.ui.output_path_label.text():
             self.output_path = self.ui.output_path_label.text()
 
-    def select_images(self):
+    def select_images(self) -> None:
+        """ Select images using file dialog. """
         filter = "*.png *.xpm *.jpg"
         imgs = QFileDialog.getOpenFileNames(self.parent, "Select Images", ".", filter)
 
         for img in imgs[0]:
             self.add_table(img)
 
-    def add_table(self, p_path : str):
+    def add_table(self, p_path : str) -> None:
+        """ Add row to our image table. """
         table_row = self.ui.image_tab.rowCount()
         self.ui.image_tab.insertRow(table_row)
         self.ui.image_tab.verticalHeader().setDefaultSectionSize(50)
@@ -110,7 +115,8 @@ class gifGenerator:
         self.ui.image_tab.setCellWidget(table_row, TableColumnsImages.PREVIEW.value, img_preview)
         self.ui.image_tab.setItem(table_row, TableColumnsImages.PATH.value, QTableWidgetItem(p_path))
 
-    def delete_images(self):
+    def delete_images(self) -> None:
+        """ Delete selected images. """
         items = self.ui.image_tab.selectedItems()
         if not items:
             return
@@ -118,10 +124,12 @@ class gifGenerator:
             id = self.ui.image_tab.row(item)
             self.ui.image_tab.removeRow(id)
 
-    def select_all_images(self):
+    def select_all_images(self) -> None:
+        """ Select all images. """
         self.ui.image_tab.selectAll()
 
-    def process_gif(self):
+    def process_gif(self) -> None:
+        """ Process gif. """
         self.frames = self.setup_key_images_data_list()
 
         loop = 0
@@ -146,7 +154,6 @@ class gifGenerator:
                 except:
                     print("[Error] Couldn't creating Folder.")
 
-
                 #process interpolation
                 self.setup_fading(self.frames)
                 #process new list with interpolated frames
@@ -170,6 +177,7 @@ class gifGenerator:
             #     print("[Error] Error processing gif")
 
     def setup_key_images_data_list(self) -> []:
+        """ Setup list of our key frame list. """
         # be sure our list is empty
         frames = []
 
@@ -191,6 +199,7 @@ class gifGenerator:
             print("[Error] Error setup list")
 
     def compute_new_frame_list(self, p_frames) -> []:
+        """ Update duration value. """
         new_frames_list = []
         total_frames = len(p_frames)
 
@@ -207,7 +216,8 @@ class gifGenerator:
 
         return new_frames_list
 
-    def update_duration(self):
+    def update_duration(self) -> None:
+        """ Update duration value. """
         if self.ui.duration_text.text():
             try:
                 duration = float(self.ui.duration_text.text())
@@ -216,36 +226,47 @@ class gifGenerator:
             except:
                 print("[Error] Not a number in line edit")
 
-    def update_width(self):
+    def update_width(self) -> None:
+        """ Update width value. """
         if self.ui.width_text.text():
             try:
                 self.width = int(self.ui.width_text.text())
             except:
                 print("[Error] Not a number in line edit")
 
-    def update_height(self):
+    def update_height(self) -> None:
+        """ Update height value. """
         if self.ui.height_text.text():
             try:
                 self.height = int(self.ui.height_text.text())
             except:
                 print("[Error] Not a number in line edit")
 
-    def update_loop(self):
+    def update_loop(self) -> None:
+        """ Update loop state. """
         self.loop = self.ui.loop_checkbox.isChecked()
 
-    def update_fade_state(self):
+    def update_fade_state(self) -> None:
+        """ Update enable_fade state. """
         self.enable_fade = self.ui.fade_checkbox.isChecked()
 
-    def update_nb_iteration(self):
+    def update_nb_iteration(self) -> None:
+        """ Update nb_iteration value. """
         if self.ui.nb_iteration_text.text():
             try:
                 self.nb_frames = int(self.ui.nb_iteration_text.text())
             except:
                 print("[Error] Not a number in line edit")
-    def update_folder_state(self):
+    def update_folder_state(self) -> None:
+        """ Update delete_temp_folder state. """
         self.delete_temp_folder = self.ui.folder_checkbox.isChecked()
-    def setup_fading(self, p_frames:[]):
 
+    # ----------------------------------------------------------------
+    # WIP fading interpolation
+    # ----------------------------------------------------------------
+
+    def setup_fading(self, p_frames:[]) -> None:
+        """ Calculate pixel interpolation. """
         # #  // TEMP SETUP FOR DEBUG PUSHBUTTON //
         # self.frames = self.setup_key_images_data_list()
         # p_frames = self.frames
@@ -259,7 +280,7 @@ class gifGenerator:
                 self.compute_interpolated_frame(path1, path2, i)
 
     def compute_interpolated_frame(self, p_path_image1 : str, p_path_image2 : str, p_step: int) -> None:
-        """ Save interpolated image in a temp folder """
+        """ Open and compute every choosen frame. """
         im1 = Image.open(p_path_image1)
         resized_img1 = im1.resize((self.width, self.height))
         px1 = resized_img1.load()
@@ -308,6 +329,7 @@ class gifGenerator:
             print("[Error] Couldn't save interpolated images")
 
     def compute_intermediate_pixel(self, p_pixel1 : tuple, p_pixel2: tuple, p_iteration: int) -> [tuple]:
+        """ Calculate pixel interpolation. """
         colors = []
         for i in range(p_iteration):
             r = self.compute_channel(p_pixel1[0], p_pixel2[0], i, p_iteration)
@@ -317,15 +339,21 @@ class gifGenerator:
 
         return colors
 
+    # not working
     def compute_channel(self, p_v1 : int, p_v2: int, p_current_step: int, p_total_step: int) -> int:
+        """ Return interpolated value. """
         if p_v1 > p_v2:
             val = p_v2 + (((p_v1 - p_v2)/ p_total_step) * (p_current_step+1))
         else:
             val = p_v1 + (((p_v2 - p_v1)/ p_total_step) * (p_current_step+1))
         return int(val)
 
-    # ------------------- UI -------------------------
-    def setup_ui(self):
+    # ----------------------------------------------------------------
+    #  UI
+    # ----------------------------------------------------------------
+    def setup_ui(self) -> None:
+        """ PyQt UI setup """
+
         self.ui.output_button = QPushButton(self.ui)
         self.ui.output_button.resize(150,25)
         self.ui.output_button.move(5, 10)
